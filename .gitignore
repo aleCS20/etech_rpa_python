@@ -1,0 +1,29 @@
+---
+
+### 2. `.gitignore`
+Este arquivo é fundamental para evitar que o Python gere arquivos desnecessários no seu Git e para proteger dados sensíveis.
+
+```python
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs e Editores
+.vscode/
+.idea/
+
+# Drivers e Logs
+*.log
+drivers/
+chromedriver
+
+# OS files
+.DS_Store
+Thumbs.db
