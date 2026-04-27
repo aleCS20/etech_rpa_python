@@ -5,8 +5,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 
 from py_compile import main
-from utils_constants.constants import URL
-from src.data.mock_dados import dados
+from utils.constants import URL
+from src.data.mock_dados import MockDados
 
 class User:
     def __init__(self):

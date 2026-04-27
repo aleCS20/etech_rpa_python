@@ -1,6 +1,5 @@
 class MockDados:
     def __init__(self):
-        #Registro de usuário para login
         self.nome = "Alessandro Oliveira"
         self.email = "alessandro_automacao_fpe@test.com"
         self.password = "SenhaForte123!"
@@ -18,5 +17,5 @@ class MockDados:
         self.state = "Amazonas"
         self.city = "Manaus"
         self.zipcode = "69075-351"
-        self.mobile_number = "92999999999"
+        self.mobile_number = "(92)99999-9999"
 
