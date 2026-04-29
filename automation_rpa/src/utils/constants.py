@@ -12,4 +12,4 @@ class Constants:
     # espera padrão
     MAX_WAIT_TIME = 15
     IMPLICIT_WAIT = 10
-    
+
