@@ -19,3 +19,7 @@ class MockDados:
         self.zipcode = "69075-351"
         self.mobile_number = "(92)99999-9999"
 
+        self.email_incorret = "usuario_inexistente@provedor.com"
+        self.password_incorret = "senha_errada_123"
+        
+

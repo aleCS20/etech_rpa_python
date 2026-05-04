@@ -50,3 +50,7 @@ class LoginLocators:
     DELETED_TEXT       = (By.XPATH, "//b[contains(text(), 'Account Deleted!')]")
     CONTINUE_BTN       = (By.XPATH, "//a[@data-qa='continue-button']")
 
+    LOGIN_INCORRET = (By.XPATH, "//p[contains(text(), 'Your email or password is incorrect!')]")
+    
+    LOGOUT_BTN = (By.XPATH, "//a[@href='/logout']")
+    
