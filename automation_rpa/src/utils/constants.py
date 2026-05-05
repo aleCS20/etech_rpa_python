@@ -1,6 +1,6 @@
 class Constants:
     # urls
-    URL = "https://automationexercise.com/"
+    BASE_URL = "https://automationexercise.com/"
 
     # mensagens
     MSG_HOME_VISIBLE = "Automation Exercise"

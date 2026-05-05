@@ -54,9 +54,7 @@ class BasePage:
         select = Select(self.find_element(locator))
         select.select_by_visible_text(text)
     
-    def save_screenshot(self, name="erro"):
-        """Salva um print da tela atual na pasta /logs caso não exista será criada"""
-        
+    def save_screenshot(self, name="erro"):       
         if not os.path.exists("logs"):
             os.makedirs("logs")
             
@@ -64,4 +62,9 @@ class BasePage:
         filepath = f"logs/{name}_{timestamp}.png"
         self.driver.save_screenshot(filepath)
         print(f"📸 Screenshot salvo em: {filepath}")
+
+    def force_click(self, locator):
+        element = self.find_element(locator)
+        self.driver.execute_script("arguments[0].click();", element)
+    
 

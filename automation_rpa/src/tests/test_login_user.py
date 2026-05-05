@@ -51,7 +51,6 @@ class TestLoginUser:
             raise e
         
         finally:
-            # Encerramento do driver
             self.driver.quit()
         
 if __name__ == "__main__":

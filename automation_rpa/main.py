@@ -1,33 +1,47 @@
 import time
+
 from src.tests.test_register_user import TestRegisterUser
 from src.tests.test_login_user import TestLoginUser
 from src.tests.test_login_user_incorret import TestLoginUserIncorrect
 from src.tests.test_logout_user import TestLogoutUser
+from src.tests.test_base import TestBase
+
 def orquestrar_automacoes():
-    print("--- Iniciando AtividadeTest Case 1 ---")
-    registro = TestRegisterUser()
-    registro.executar_teste()
+    sucesso_etapa = True
+    driver = TestBase.get_driver()
 
-    print("⏳ Aguardando 5 segundos para o próximo Test Case ....")
-    time.sleep(5)
+    try:
+        if sucesso_etapa:
+            print("\n--- [1] Iniciando Registro ---")
+            tc1 = TestRegisterUser()
+            sucesso_etapa = tc1.executar_teste(deletar_ao_final=False)
 
-    print("--- Iniciando Test Case 2 ---")
-    login = TestLoginUser()
-    login.executar_teste_login_sucesso()
+        if sucesso_etapa:
+            print("\n--- [4] Testando Logout ---")
+            tc4 = TestLogoutUser()
+            sucesso_etapa = tc4.executar_teste_logout()
+            time.sleep(2)
 
-    print("⏳ Aguardando 5 segundos para o próximo Test Case ....")
-    time.sleep(5)
+        if sucesso_etapa:
+            print("\n--- [2] Testando Login com Sucesso ---")
+            tc2 = TestLoginUser()
+            sucesso_etapa = tc2.executar_teste_login_sucesso(deletar_ao_final=False)
 
-    print("--- Iniciando Test Case 3 ---")
-    login_incoreto = TestLoginUserIncorrect()
-    login_incoreto.executar_teste_login_email_incorreto()
+        print("\n--- [3] Testando Login Incorreto ---")
+        tc3 = TestLoginUserIncorrect()
+        tc3.executar_teste_login_email_incorreto()
 
-    print("⏳ Aguardando 5 segundos para o próximo Test Case ....")
-    time.sleep(5)
+        if sucesso_etapa:
+            print("\n--- [LIMPEZA] Deletando conta de teste ---")
+            from src.pages.login_page import LoginPage
+            lp = LoginPage(driver)
+            lp.deletar_conta()
 
-    print("--- Iniciando Test Case 4: Logout ---")
-    logout_test = TestLogoutUser()
-    logout_test.executar_teste_logout()
+    except Exception as e:
+        print(f"🛑 Fluxo interrompido por erro crítico: {e}")
+    finally:
+        print("🏁 Finalizando WebDriver...")
+        driver.quit()
     
 if __name__ == "__main__":
     orquestrar_automacoes()

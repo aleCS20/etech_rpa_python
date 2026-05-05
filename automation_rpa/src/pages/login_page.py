@@ -2,7 +2,6 @@ from .base_page import BasePage
 from src.utils.locators import LoginLocators, RegisterLocators
 
 class LoginPage(BasePage):
-
     def acessar_secao_autenticacao(self):
         self.click(RegisterLocators.SIGNUP_LOGIN_LINK)
     
@@ -23,6 +22,5 @@ class LoginPage(BasePage):
         return confirmacao
     
     def realizar_logout(self):
-        """Passo 9: Clica no botão de Logout."""
         self.click(LoginLocators.LOGOUT_BTN)
     
