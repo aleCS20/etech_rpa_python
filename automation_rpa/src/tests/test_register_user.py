@@ -1,13 +1,13 @@
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from webdriver_manager.chrome import ChromeDriverManager
-from .test_base import BaseTest
+from .test_base import TestBase
 
 from src.utils.constants import Constants
 from src.data.mock_dados import MockDados
 from src.pages.register_user import RegisterPage
 
-class TestRegisterUser(BaseTest):
+class TestRegisterUser(TestBase):
     def __init__(self):
         super().__init__()
         self.page = RegisterPage(self.driver)
