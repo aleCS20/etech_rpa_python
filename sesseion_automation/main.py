@@ -18,14 +18,14 @@ def executar_rpa_botcity():
             
             context.close()
         
-        print("\n🚀 Segunda execução (ou recorrente): Reutilizando sessão salva...")
+        print("\nSegunda execução (ou recorrente): Reutilizando sessão salva...")
         
         authenticated_context = browser.new_context(storage_state=Constants.SESSION_PATH)
         page = authenticated_context.new_page()
         
         page.goto("https://developers.botcity.dev/dashboard")
         
-        print("👀 Validando se o acesso foi direto...")
+        print("Validando se o acesso foi direto...")
         page.wait_for_load_state("networkidle")
         
         print(f"URL Atual: {page.url}")

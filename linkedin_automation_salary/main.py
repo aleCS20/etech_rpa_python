@@ -7,8 +7,8 @@ def executar_desafio_salario():
     print("==================================================")
     print("      RPA LINKEDIN: PESQUISA SALARIAL GLOBAL      ")
     print("==================================================")
-    cargo_pesquisa = input("⌨️ Digite o cargo/vaga desejada (Ex: RPA Developer): ")
-    pais_pesquisa = input("⌨️ Digite o país de destino (Ex: United States ou Canada): ")
+    cargo_pesquisa = input("Digite o cargo/vaga desejada (Ex: RPA Developer): ")
+    pais_pesquisa = input("Digite o país de destino (Ex: United States ou Canada): ")
     
     if not cargo_pesquisa or not pais_pesquisa:
         print("Erro: O cargo e o país devem ser preenchidos no terminal para continuar.")
@@ -30,10 +30,10 @@ def executar_desafio_salario():
         print(f"\n--- RELATÓRIO SALARIAL: {cargo_pesquisa.upper()} | {pais_pesquisa.upper()} ---")
         print("=" * 60)
         for idx, item in enumerate(dados_coletados, 1):
-            print(f"🔹 Oportunidade #{idx}")
-            print(f"   💼 Função: {item['cargo']}")
-            print(f"   🏢 Empresa: {item['empresa']}")
-            print(f"   💰 Remuneração/Faixa: {item['salario']}")
+            print(f" Oportunidade #{idx}")
+            print(f"   Função: {item['cargo']}")
+            print(f"   Empresa: {item['empresa']}")
+            print(f"   Remuneração/Faixa: {item['salario']}")
             print("-" * 60)
 
         print("Automação finalizada com sucesso!")

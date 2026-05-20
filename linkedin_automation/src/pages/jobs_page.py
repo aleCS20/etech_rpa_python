@@ -1,5 +1,5 @@
 import urllib.parse
-from src.utils.constants import Constants
+from src.utils.config import Config
 
 class LinkedinJobsPage:
     def __init__(self, page):
@@ -7,10 +7,10 @@ class LinkedinJobsPage:
         self.cards_vagas = page.locator(".jobs-search-results-list li.jobs-search-results__list-item")
 
     def buscar_vagas(self):
-        termo_codificado = urllib.parse.quote(Constants.TERMO_PESQUISA)
+        termo_codificado = urllib.parse.quote(Config.TERMO_PESQUISA)
         url_busca = f"https://www.linkedin.com/jobs/search/?keywords={termo_codificado}"
         
-        print(f"Buscando por: '{Constants.TERMO_PESQUISA}'...")
+        print(f" Buscando por: '{Config.TERMO_PESQUISA}'...")
         self.page.goto(url_busca)
         self.page.wait_for_load_state("networkidle")
 
@@ -18,9 +18,8 @@ class LinkedinJobsPage:
         lista_vagas = []
         
         self.cards_vagas.first.wait_for(state="visible", timeout=15000)
-        
         limite = min(3, self.cards_vagas.count())
-        print(f"📦 Extraindo dados das {limite} primeiras vagas encontradas...")
+        print(f" Extraindo dados das {limite} primeiras vagas encontradas...")
 
         for i in range(limite):
             card = self.cards_vagas.nth(i)
