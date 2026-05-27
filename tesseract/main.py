@@ -10,12 +10,9 @@ def main():
         rpa.open_browser()
         rpa.clicar_reaction_time_test()
         rpa.clicar_wait_estart()
-
-        #rpa.testando_cliques()
-
-
+        
+        print("Encerrando Automação...")
         browser.close()
-
 
 if __name__ == "__main__":
     main()
