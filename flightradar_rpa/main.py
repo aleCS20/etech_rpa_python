@@ -11,7 +11,15 @@ def main():
         rpa = FlightRadarPage(page)
 
         rpa.iniciar_navegador()
-        rpa.varrer_e_clicar_aviao()
+        rpa.simular_movimento_mapa()
+
+        print("\n === INICIANDO ETAPA DE AVIÕES ===")
+        rpa.varrer_e_clicar_aviao(meta_requisito=5)
+        
+        rpa.deslocar_para_area_de_helicopteros()
+
+        print("\n === INICIANDO ETAPA DE HELICÓPTEROS ===")
+        rpa.varrer_e_clicar_helicoptero(meta_requisito=2)
 
         print(" Finalizando automação em 5 segundos...")
         page.wait_for_timeout(5000)
