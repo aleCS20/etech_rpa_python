@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import pyautogui
 import time
-import random
-
+import os
+import easyocr
 from pathlib import Path
 
 class FlightRadarPage:
@@ -12,25 +12,36 @@ class FlightRadarPage:
         self.url = "https://www.flightradar24.com/"
         
         self.base_dir = Path(__file__).resolve().parent.parent.parent
+        self.diretorio_imagens = self.base_dir / "img"
+        
+        os.makedirs(str(self.diretorio_imagens), exist_ok=True)
+        
+        print(" Inicializando redes neurais do EasyOCR para auditoria de imagens...")
+        self.ocr_reader = easyocr.Reader(["pt", "en"])
+
         self.templates_avioes = [
             self.base_dir / "assets" / "aviao1.png",
             self.base_dir / "assets" / "aviao2.png",
             self.base_dir / "assets" / "aviao3.png",
             self.base_dir / "assets" / "aviao4.png",
             self.base_dir / "assets" / "aviao5.png",
-            self.base_dir / "assets" / "aviao6.png",
+            self.base_dir / "assets" / "aviao6.png"
         ]
         
-        self.confidence_limiar = 0.65
-        self.distancia_duplicados = 30
+        self.confidence_limiar = 0.70
+        self.distancia_duplicados = 35
         self.avioes_clicados_sucesso = []
+        self.ultimo_codigo_capturado = ""
 
-        self.txt_codigo_aviao = page.locator("h2[data-test='aircraft-registration'], .aircraft-type-code").first
-        self.txt_origem = page.locator("div[data-test='flight-origin-name']").first
-        self.txt_destino = page.locator("div[data-test='flight-destination-name']").first
+        self.txt_codigo_aviao = page.get_by_test_id("aircraft-panel__header__callsign")
+        self.txt_origem = page.get_by_test_id("aircraft-panel__airport-departure-city")
+        self.txt_destino = page.get_by_test_id("aircraft-panel__airport-arrival-city")
+        self.img_aviao_painel = page.get_by_test_id("aircraft-panel__image__image__0")
 
     def iniciar_navegador(self):
         print(" Carregando FlightRadar24 via Playwright...")
+        largura_real, altura_real = pyautogui.size()
+        self.page.set_viewport_size({"width": largura_real, "height": altura_real})
         self.page.goto(self.url, timeout=100000, wait_until="commit")
         
         self.page.bring_to_front()
@@ -38,25 +49,30 @@ class FlightRadarPage:
         pyautogui.hotkey('win', 'up')
         time.sleep(2)
 
-        try: self.page.get_by_role("button", name="Agree and close").click(timeout=5000)
+        try: self.page.get_by_role("button", name="Agree and close").click(timeout=6000)
         except: pass
-        try: self.page.get_by_role("button", name="Close").click(timeout=5000)
+        try: self.page.get_by_role("button", name="Close").click(timeout=4000)
         except: pass
         
+        print(" Removendo barreiras comerciais para liberar a barra esquerda...")
         try:
             self.page.evaluate("""
-                const anuncios = document.querySelectorAll('.commercial-sidebar, .sidebar-unauthenticated, #sidebar-unauthenticated, aside[class*="sidebar"]');
-                anuncios.forEach(el => el.remove());
+                const comerciais = document.querySelectorAll('.commercial-sidebar, .sidebar-unauthenticated, #sidebar-unauthenticated, aside[class*="sidebar"], div[class*="sidebar-premium"]');
+                comerciais.forEach(el => el.remove());
+                
                 const mapa = document.querySelector('#map-container, .map-container');
-                if (mapa) mapa.style.width = '100%';
+                if (mapa) {
+                    mapa.style.width = '100%';
+                    mapa.style.position = 'absolute';
+                    mapa.style.left = '0';
+                }
             """)
             self.page.evaluate("window.dispatchEvent(new Event('resize'));")
-        except:
-            print(" Não foi possível limpar os elementos de anúncio.")
-
-        self.page.evaluate("document.body.style.zoom = '0.85'")
+            print(" Mapa redimensionado nativamente em escala 1:1!")
+        except Exception as e:
+            print(f" Falha na limpeza de estilo: {e}")
+            
         time.sleep(2)
-        print(" Interface preparada e limpa!")
 
     def _capturar_matriz_tela(self):
         img = pyautogui.screenshot()
@@ -75,7 +91,7 @@ class FlightRadarPage:
                 filtrados.append((x, y))
         return filtrados
 
-    def varrer_e_clicar_aviao(self):
+    def varrer_e_clicar_aviao(self, meta_requisito=5):
         print(" Capturando tela e processando matriz OpenCV...")
         matriz_tela = self._capturar_matriz_tela()
         pontos_encontrados = []
@@ -100,46 +116,99 @@ class FlightRadarPage:
         pontos_unicos = self._remover_duplicados(pontos_encontrados)
         print(f" Foram detectados {len(pontos_unicos)} aviões candidatos na tela.")
 
+        total_capturado = 0
+
         for x, y in pontos_unicos:
-            if any(abs(x - cx) < 30 and abs(y - cy) < 30 for cx, cy in self.avioes_clicados_sucesso):
+            if total_capturado >= meta_requisito:
+                print(f" Meta de {meta_requisito} aviões atingida com sucesso!")
+                break
+
+            if x < 450:
                 continue
 
-            print(f" Movendo e efetuando clique persistente em: ({x}, {y})")
+            if any(abs(x - cx) < 25 and abs(y - cy) < 25 for cx, cy in self.avioes_clicados_sucesso):
+                continue
+
+            print(f" Efetuando clique ultra calibrado em: ({x}, {y})")
             pyautogui.moveTo(x, y, duration=0.4)
             
             pyautogui.mouseDown(x, y)
             time.sleep(0.15)
             pyautogui.mouseUp(x, y)
             
-            print("Aguardando confirmação visual do painel lateral...")
-            time.sleep(2.5) 
+            print(" Validando atualização do painel de dados por TestID...")
+            time.sleep(3.5) 
+
             try:
                 if self.txt_codigo_aviao.is_visible():
-                    print(f" [SUCESSO] Painel detectado visualmente para a coordenada ({x}, {y})!")
-                    self.avioes_clicados_sucesso.append((x, y))
-                    self._extrair_dados_painel()
-                    return True
+                    codigo_atual = self.txt_codigo_aviao.inner_text().strip()
+                    
+                    if codigo_atual != self.ultimo_codigo_capturado and codigo_atual != "N/A":
+                        print(f" Painel detectado! Nova aeronave ativa: {codigo_atual}!")
+                        self.avioes_clicados_sucesso.append((x, y))
+                        self.ultimo_codigo_capturado = codigo_atual
+                        self._processar_e_salvar_foto_ocr(codigo_atual)
+                        self._extrair_dados_painel()
+                        
+                        total_capturado += 1
+                        print(f" Progresso atual: {total_capturado} de {meta_requisito} aviões salvos.\n")
+                        
+                        print(" Fechando painel lateral esquerdo para liberar o mapa...")
+                        btn_fechar_painel = self.page.locator("button[data-testid='aircraft-panel__close-button'], .aircraft-panel-close, button:has-text('✕')").first
+                        if btn_fechar_painel.count() > 0:
+                            btn_fechar_painel.click(timeout=3000)
+                            time.sleep(1.5)
+                        
+                    else:
+                        print(" O painel exibe um registro repetido ou código N/A inválido.")
                 else:
-                    print(" O painel não abriu para esta coordenada. Tentando próximo ponto...")
-            except Exception:
-                print(" Falha ao checar o elemento do painel. Prosseguindo...")
+                    print(" Painel não foi reconhecido pelo Playwright nesta coordenada.")
+            except Exception as e:
+                print(f" Erro ao checar o estado do painel por TestID: {e}")
 
-        print(" Nenhum avião da varredura atual pôde ser selecionado.")
-        return False
+        print(f" Fim da varredura de tela. Total de novos aviões processados nesta rodada: {total_capturado}")
+        return total_capturado
+
+    def _processar_e_salvar_foto_ocr(self, codigo_voo):
+        caminho_salvamento = self.diretorio_imagens / f"{codigo_voo}.png"
+        print(f" Capturando recorte gráfico da foto da aeronave...")
+        
+        try:
+            if self.img_aviao_painel.is_visible():
+                self.img_aviao_painel.screenshot(path=str(caminho_salvamento))
+                print(f" Foto salva com sucesso em: /img/{codigo_voo}.png")
+                
+                img_cv = cv2.imread(str(caminho_salvamento))
+                
+                gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
+                
+                resultado_ocr = self.ocr_reader.readtext(gray)
+                
+                print(" [EasyOCR Audit] Textos secundários identificados na foto:")
+                textos_coletados = [item[1] for item in resultado_ocr if item[2] > 0.4]
+                if textos_coletados:
+                    print(f"   ↳ Coletas: {textos_coletados}")
+                else:
+                    print("   ↳ Nenhuma inscrição de texto evidente detectada sobre a imagem.")
+            else:
+                print(" Esta aeronave não possui foto de exibição cadastrada no servidor do site.")
+        except Exception as e:
+            print(f"⚠️ Falha na execução da sub-pipeline de salvamento/OCR: {e}")
 
     def _extrair_dados_painel(self):
-        print(" Raspando propriedades textuais do painel...")
+        print(" Extraindo dados textuais do painel lateral...")
         try:
-            self.txt_codigo_aviao.wait_for(state="visible", timeout=5000)
+            self.txt_codigo_aviao.wait_for(state="visible", timeout=4000)
             codigo = self.txt_codigo_aviao.inner_text().strip()
-            origem = self.txt_origem.inner_text().strip() if self.txt_origem.count() > 0 else "Não informada"
-            destino = self.txt_destino.inner_text().strip() if self.txt_destino.count() > 0 else "Não informada"
+            origem = self.txt_origem.inner_text().strip() if self.txt_origem.is_visible() else "N/A - Not Available"
+            destino = self.txt_destino.inner_text().strip() if self.txt_destino.is_visible() else "N/A - Not Available"
             
-            print("\n === DADOS CAPTURADOS COM SUCESSO ===")
-            print(f"Código: {codigo}")
-            print(f"Origem: {origem}")
-            print(f"Destino: {destino}")
+            print("\n =========================================")
+            print("       DADOS DA AERONAVE CAPTURADA (RPA)    ")
+            print("=========================================")
+            print(f"  Identificação/Voo: {codigo}")
+            print(f"  Cidade de Origem:  {origem}")
+            print(f"  Cidade de Destino: {destino}")
             print("=========================================\n")
         except Exception as e:
-            print(f" Painel não respondeu ou seletores mudaram: {e}")
-
+            print(f" Erro ao capturar texto dos elementos: {e}")

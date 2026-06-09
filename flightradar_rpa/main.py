@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 from src.pages.flightradar_page import FlightRadarPage
 
 def main():
-    print(" Inicializando Motor da Automação ...")
+    print(" Inicializando Automação -> Flightradar24 ...")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
         context = browser.new_context(viewport=None)
