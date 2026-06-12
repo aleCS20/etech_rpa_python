@@ -6,7 +6,7 @@ class AnalisaPrecoPages:
         resultados_top3 = {}
         
         for item, ofertas in self.dados.items():
-            if not ofertas:
+            if (not ofertas):
                 resultados_top3[item] = []
                 continue
             ofertas_ordenadas = sorted(ofertas, key=lambda x: x['preco'])
@@ -22,10 +22,10 @@ class AnalisaPrecoPages:
                 loja = oferta['estabelecimento']
                 preco = oferta['preco']
                 
-                if not loja or loja == "Não informado":
+                if (not loja or loja == "Não informado"):
                     continue
                 
-                if loja not in custo_por_loja:
+                if (loja not in custo_por_loja):
                     custo_por_loja[loja] = {'total': 0.0, 'itens_encontrados': 0}
                 
                 custo_por_loja[loja]['total'] += preco
@@ -33,8 +33,13 @@ class AnalisaPrecoPages:
 
         lojas_ordenadas = sorted(custo_por_loja.items(), key=lambda x: x[1]['total'])
         
-        melhor_loja = lojas_ordenadas[0] if lojas_ordenadas else ("Sem dados", {"total": 0})
-        pior_loja = lojas_ordenadas[-1] if lojas_ordenadas else ("Sem dados", {"total": 0})
+        if (lojas_ordenadas):
+            melhor_loja = lojas_ordenadas[0]
+            pior_loja = lojas_ordenadas[-1]
+        else:
+            estrutura_vazia = {"total": 0.0, "itens_encontrados": 0}
+            melhor_loja = ("Sem dados válidos", estrutura_vazia)
+            pior_loja = ("Sem dados válidos", estrutura_vazia)
         
         return melhor_loja, pior_loja
 
