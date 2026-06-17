@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 from config import URL_AUTENTICACAO, USER_RPA, PASSWORD_RPA
 from pages.login_page import LoginPage
 from pages.dashboard_page import DashboardPage
-from extractors.scrapy_extractor import BeautifulSoupExtractor
+from extractors.scrapy_extractor import ScrapyExtractor
 
 def main():
     print(" ****  DESAFIO FINAL: DESIGN PATTERNS EM RPA  ****  ")
@@ -26,7 +26,7 @@ def main():
             print("Login efetuado com sucesso!")
             html_logado = tela_dashboard.obter_html_da_pagina()
             
-            extrator_bs4 = BeautifulSoupExtractor()
+            extrator_bs4 = ScrapyExtractor()
             relatorio = extrator_bs4.extrair_relatorio(html_logado)
 
             print(f"Total de relatórios extraídos com sucesso: {len(relatorio)}")
