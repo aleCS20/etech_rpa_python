@@ -1,26 +1,43 @@
 # instalar a biblioteca: pip install xlrd
 # instalr a biblioteca: pip install xlwt
 # instalar a biblioteca: pip install xlutils
-import os
+# instalar a biblioteca: pip install openpyxl
+
+# config.py
 from pathlib import Path
 
-# Caminhos dos dados/planilhas
+# 1. Caminhos de Pastas e Diretórios Locais
 BASE_DIR = Path(__file__).resolve().parent
-DATA_RAW_DIR = BASE_DIR / "data" / "raw"
-DATA_PROCESSED_DIR = BASE_DIR / "data" / "processed"
+PASTA_SISTEMA_BRUTO = BASE_DIR / "data" / "raw"
+PASTA_TEMPLATE_PADRAO = BASE_DIR / "data" / "template"
+PASTA_RESULTADO_FINAL = BASE_DIR / "data" / "processed"
 
-os.makedirs(str(DATA_RAW_DIR), exist_ok=True)
-os.makedirs(str(DATA_PROCESSED_DIR), exist_ok=True)
+# 2. Nomes dos Arquivos Físicos (Todos em formato estrito .xls)
+ARQUIVO_EXTRAIDO_SISTEMA = "terceirizados-cetem_maiago2024.xls"
+ARQUIVO_TEMPLATE_GABARITO = "planilha_padrao_envio.xls"
 
-# Definições do arquivo baixado e regras de negócio
-ARQUIVO_TREINO = "agraciados-cnpq-todos-os-premios-27-07-2022.xls"
+# =====================================================================
+#  AJUSTE PARA A INDÚSTRIA: LINHA DO CABECALHO REAL
+# =====================================================================
+# Neste arquivo de teste, os títulos começam logo na linha 1 (índice 0).
+# Deixamos configurado como 0. Se na indústria mudar, altere aqui.
+LINHA_DO_CABECALHO_REAL = 0  
 
-# Autenticação do Servidor de E-mail (verificar arquivo .env)
-SMTP_SERVER = "smtp.empresa.com.br"
-SMTP_PORT = 587
-EMAIL_REMETENTE = "rpa.industrial@empresa.com.br"
-PASSWORD_REMETENTE = "SenhaSecretaDoBot123"
+# Nome da aba gabarito exigida pela indústria
+NOME_GUIA_TEMPLATE = "TAX USER RI"
 
-# Destinatários para encaminhar via e-mail
-EMAIL_DESTINATARIO = "gestor.producao@empresa.com.br"
+# =====================================================================
+#  AJUSTE PARA A INDÚSTRIA: COLUNA E VALOR DE FILTRAGEM (STATUS)
+# =====================================================================
+# Para o nosso laboratório, usaremos a coluna de Empresa e o valor Plansul.
+# Na indústria, altere 'Razão Social da Empresa' para 'Status'
+# e 'PLANSUL PLANEJAMENTO...' para 'Aprovado'
+COLUNA_STATUS_FILTRO = "Razão Social da Empresa"
+VALOR_STATUS_DESEJADO = "PLANSUL PLANEJAMENTO E CONSULTORIA EIRELI"
+
+# Nome do campo de data adicionado para o teste (Formatar para Inglês)
+COLUNA_DATA_PARA_INGLES = "Data Início da Ação"
+
+# Liste as colunas que devem manter formato de Texto Estrito (Sem perdas de zeros)
+COLUNAS_FORMATO_TEXTO_PURO = ["CNPJ", "Código da UG\nUnidade Gestora"]
 

@@ -1,50 +1,60 @@
 # main.py
 import sys
+import os
 from config import (
-    DATA_RAW_DIR, DATA_PROCESSED_DIR, ARQUIVO_TREINO,
-    SMTP_SERVER, SMTP_PORT, EMAIL_REMETENTE, PASSWORD_REMETENTE, EMAIL_DESTINATARIO
+    PASTA_SISTEMA_BRUTO, PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL,
+    ARQUIVO_EXTRAIDO_SISTEMA, ARQUIVO_TEMPLATE_GABARITO, LINHA_DO_CABECALHO_REAL,
+    NOME_GUIA_TEMPLATE, COLUNA_STATUS_FILTRO, VALOR_STATUS_DESEJADO, 
+    COLUNA_DATA_PARA_INGLES, COLUNAS_FORMATO_TEXTO_PURO
 )
-from src.transformers.excel_transformer import ExcelTransformer
-from src.utils.mailer import Mailer
+from src.transformers.extractor_transformer import ExtractorTransformer
+from src.transformers.template_injector import TemplateInjector
 
 def main():
-    print("***** EXECUTANDO O RPA DE TRATAMENTO DE PLANILHAS *****\n")
-    
-    # Validação de Segurança de Entrada
-    arquivo_bruto = DATA_RAW_DIR / ARQUIVO_TREINO
-    if not arquivo_bruto.exists():
-        print(f" Erro de Entrada: Coloque a planilha '{ARQUIVO_TREINO}' em '/data/raw/' para rodar o teste.")
+    print("==================================================")
+    print("     RPA INDUSTRIAL: PIPELINE DE DADOS (.XLS)     ")
+    print("==================================================")
+
+    # Cria as pastas de ambiente automaticamente se não existirem
+    for pasta in [PASTA_SISTEMA_BRUTO, PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL]:
+        os.makedirs(str(pasta), exist_ok=True)
+
+    # Validações estruturais de arquivos locais
+    if not (PASTA_SISTEMA_BRUTO / ARQUIVO_EXTRAIDO_SISTEMA).exists():
+        print(f" Erro: Coloque a planilha do sistema '{ARQUIVO_EXTRAIDO_SISTEMA}' em '/data/raw/'")
+        sys.exit(1)
+        
+    if not (PASTA_TEMPLATE_PADRAO / ARQUIVO_TEMPLATE_GABARITO).exists():
+        print(f" Erro: Coloque a planilha padrão '{ARQUIVO_TEMPLATE_GABARITO}' em '/data/template/'")
         sys.exit(1)
 
     try:
-        # ETAPA 1: Instanciação e Execução do Tratamento da Planilha
-        processador = ExcelTransformer(DATA_RAW_DIR, DATA_PROCESSED_DIR)
-        caminho_planilha_tratada = processador.tratar_planilha_industrial(ARQUIVO_TREINO)
-        
-        print("\n-------------------------------------------------------------")
-       
-        # ETAPA 2: Instanciação e Execução do Envio de E-mail
-        #bot_email = Mailer(SMTP_SERVER, SMTP_PORT, EMAIL_REMETENTE, PASSWORD_REMETENTE)
-        
-        #assunto_rpa = "RPA: Relatório Industrial CNPq Tratado (Até 15ª Edição)"
-        '''corpo_rpa = (
-            "Olá Gestor,\n\n"
-            "Segue em anexo o relatório extraído do sistema interno devidamente processado pelo RPA.\n"
-            "As colunas Categoria e Classificação foram removidas e os dados limitados à 15ª edição.\n\n"
-            "Atenciosamente,\nRobô de Processos Industriais."
-        )'''
-        '''
-        bot_email.enviar_relatorio_com_anexo(
-            destinatario=EMAIL_DESTINATARIO,
-            assunto=assunto_rpa,
-            corpo=corpo_rpa,
-            caminho_anexo=caminho_planilha_tratada
-        )'''
-        
-        print("\n ***** AUTOMAÇÃO EXECUTADA COM SUCESSO *****")
+        # ETAPA 1: Extração e Limpeza em Memória RAM
+        extrator = ExtractorTransformer(PASTA_SISTEMA_BRUTO)
+        dados_tratados = extrator.extrair_e_tratar_dados(
+            nome_arquivo=ARQUIVO_EXTRAIDO_SISTEMA,
+            linha_cabecalho=LINHA_DO_CABECALHO_REAL,
+            col_status=COLUNA_STATUS_FILTRO,
+            valor_status=VALOR_STATUS_DESEJADO,
+            col_data=COLUNA_DATA_PARA_INGLES,
+            colunas_texto=COLUNAS_FORMATO_TEXTO_PURO
+        )
+
+        print(f"\n Total de registros localizados pós-filtro: {len(dados_tratados)} linhas.")
+
+        # ETAPA 2: Injeção por Cópia Física e Sobrescrita Segura no Template .xls
+        injetor = TemplateInjector(PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL)
+        injetor.injetar_dados_no_gabarito(
+            nome_template=ARQUIVO_TEMPLATE_GABARITO,
+            nome_saida=ARQUIVO_TEMPLATE_GABARITO,  
+            nome_guia=NOME_GUIA_TEMPLATE,
+            dataframe_dados=dados_tratados
+        )
+
+        print("\n ***** RPA FINALIZADO COM 100% DE SUCESSO EM FORMATO LEGADO .XLS *****")
 
     except Exception as e:
-        print(f"\n Falha Geral do RPA -> : {e}")
+        print(f"\n Falha Crítica na execução da esteira de dados: {e}")
 
 if __name__ == "__main__":
     main()
