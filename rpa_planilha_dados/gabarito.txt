@@ -1,0 +1,225 @@
+# config.py
+from pathlib import Path
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: CAMINHOS DAS PASTAS LOCAIS
+# =====================================================================
+BASE_DIR = Path(__file__).resolve().parent
+PASTA_SISTEMA_BRUTO = BASE_DIR / "data" / "raw"
+PASTA_TEMPLATE_PADRAO = BASE_DIR / "data" / "template"
+PASTA_RESULTADO_FINAL = BASE_DIR / "data" / "processed"
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: NOMES DOS ARQUIVOS FÍSICOS
+# =====================================================================
+ARQUIVO_EXTRAIDO_SISTEMA = "patentes-2025.csv"     
+ARQUIVO_TEMPLATE_GABARITO = "patentes-template-2025.xlsx"
+ARQUIVO_FINAL_ENVIO = "relatorio_final_patentes.xlsx"
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: NOME DA ABA/GUIA DO TEMPLATE
+# =====================================================================
+NOME_GUIA_TEMPLATE = "TAX USER (RI)"
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: SE O SEU ARQUIVO REAL FOR UM FALSO .XLS
+# =====================================================================
+# Se o arquivo extraído do sistema da indústria for aquele texto separado
+# por tabulação (falso .xls), altere o caractere abaixo para: '\t'
+SEPARADOR_DO_ARQUIVO = ';'
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: LINHA DO CABEÇALHO (MUDADO PARA A1 / 0)
+# =====================================================================
+# No laboratório era 1 porque pulava a linha de título unificado. 
+# Como na indústria o arquivo extraído e o template já começam com os
+# cabeçalhos direto na primeira linha (A1), travamos o ponteiro em: 0
+PULAR_LINHAS_BRUTAS = 0  
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: COLUNA E CRITÉRIO DE FILTRAGEM
+# =====================================================================
+COLUNA_STATUS_FILTRO = "Situação"                
+VALOR_STATUS_DESEJADO = "Vigente"                  
+
+# =====================================================================
+# 🛠️ [ALTERE AQUI NA INDÚSTRIA]: MAPEAMENTO DE COLUNAS DE DATA E TEXTO
+# =====================================================================
+COLUNAS_DATA_PARA_INGLES = ["Data de Depósito", "Data de Validade da Patente"]
+COLUNAS_FORMATO_TEXTO_PURO = ["Pedido", "Número da Revista"]
+
+# src/transformers/pipeline_transformer.py
+import pandas as pd
+import openpyxl
+from pathlib import Path
+
+class DataCleaner:
+    """Classe especialista em carregar, filtrar e higienizar os dados do Pandas."""
+    def __init__(self, pasta_raw: Path):
+        self.pasta_raw = pasta_raw
+
+    def processar_dados_brutos(self, nome_arquivo, separador, linhas_para_pular, col_status, valor_status, colunas_data, colunas_texto):
+        caminho_csv = self.pasta_raw / nome_arquivo
+        print(f"📥 [Cleaner] Lendo arquivo do sistema: {nome_arquivo}")
+        
+        # Carrega o arquivo usando o separador dinâmico do config.py
+        df = pd.read_csv(
+            str(caminho_csv), 
+            sep=separador, 
+            encoding='iso-8859-1', 
+            dtype=str, 
+            skiprows=linhas_para_pular
+        )
+        
+        # Limpa quebras de linha e espaços dos cabeçalhos capturados
+        df.columns = df.columns.astype(str).str.replace(r'[\r\n]+', ' ', regex=True).str.strip()
+
+        # 1. Trava colunas de identificadores como Texto Puro
+        for coluna in colunas_texto:
+            coluna_limpa = coluna.strip()
+            if coluna_limpa in df.columns:
+                df[coluna_limpa] = df[coluna_limpa].fillna("").astype(str).str.strip()
+
+        # 2. Padronização das datas em memória
+        for col_data in colunas_data:
+            col_data_limpa = col_data.strip()
+            if col_data_limpa in df.columns:
+                print(f"📅 [Cleaner] Tratando formato da coluna de data: '{col_data_limpa}'")
+                df[col_data_limpa] = pd.to_datetime(df[col_data_limpa], errors='coerce')
+                df[col_data_limpa] = df[col_data_limpa].dt.strftime('%Y-%m-%d')
+
+        df = df.fillna("")
+
+        # 3. Filtragem Condicional pelo Status
+        col_status_limpa = col_status.strip()
+        if col_status_limpa not in df.columns:
+            raise KeyError(f"❌ Erro: A coluna de filtro '{col_status_limpa}' não foi localizada.")
+
+        print(f"⏳ [Cleaner] Filtrando registros onde '{col_status_limpa}' contém '{valor_status}'...")
+        df_filtrado = df[df[col_status_limpa].astype(str).str.contains(valor_status, case=False, na=False)].copy()
+        
+        return df_filtrado
+
+
+class ExcelInjector:
+    """Classe especialista em injeção e fixação de layouts modernos."""
+    def __init__(self, pasta_template: Path, pasta_processed: Path):
+        self.pasta_template = pasta_template
+        self.pasta_processed = pasta_processed
+
+    def injetar_no_template_xlsx(self, nome_template, nome_saida, nome_guia, colunas_data, dataframe_dados):
+        caminho_template = self.pasta_template / nome_template
+        caminho_final = self.pasta_processed / nome_saida
+
+        print(f"📋 [Injector] Carregando a Planilha Gabarito: {nome_template}")
+        wb = openpyxl.load_workbook(str(caminho_template), data_only=False)
+        
+        if nome_guia in wb.sheetnames:
+            aba = wb[nome_guia]
+        else:
+            aba = wb.active
+
+        # =====================================================================
+        # 🛠️ AJUSTE PARA A INDÚSTRIA: LIMPEZA A PARTIR DA LINHA 2 (CÉLULA A1 LIVRE)
+        # =====================================================================
+        # Como o cabeçalho original ocupa apenas a Linha 1, passamos apagando
+        # os dados antigos restritamente da linha 2 para baixo, mantendo os títulos.
+        max_linhas_gabarito = aba.max_row
+        if max_linhas_gabarito > 1:
+            print("🧹 [Injector] Apagando dados antigos a partir da Linha 2...")
+            for row_idx in range(2, max_linhas_gabarito + 1):
+                for col_idx in range(1, aba.max_column + 1):
+                    aba.cell(row=row_idx, column=col_idx).value = None
+
+        print("⚡ [Injector] Injetando novos registros preservando grades e forçando exibição YMD...")
+        
+        # Mapeia a posição (índice numérico) das colunas de data dentro da tabela
+        cabecalhos_lista = dataframe_dados.columns.tolist()
+        indices_colunas_data = [cabecalhos_lista.index(c) + 1 for c in colunas_data if c in cabecalhos_lista]
+
+        registros_novos = dataframe_dados.values.tolist()
+
+        # =====================================================================
+        # 🛠️ AJUSTE PARA A INDÚSTRIA: ESCRITA A PARTIR DA LINHA 2
+        # =====================================================================
+        linha_atual = 2
+        for linha_dados in registros_novos:
+            for col_idx, valor in enumerate(linha_dados, start=1):
+                celula = aba.cell(row=linha_atual, column=col_idx)
+                celula.value = "" if pd.isna(valor) else str(valor).strip()
+                
+                # =====================================================================
+                # 🛠️ CORREÇÃO DEFINITIVA: BLOQUEIO DA MÁSCARA DE DATA EM INGLÊS
+                # =====================================================================
+                # Se a coluna atual for um campo de data mapeado, força o Excel a exibir
+                # de forma estrita como Ano-Mês-Dia, impedindo a conversão regional para DMY.
+                if col_idx in indices_colunas_data and celula.value != "":
+                    celula.number_format = 'yyyy-mm-dd'
+            
+            linha_atual += 1
+
+        print(f"💾 [Injector] Gravando planilha final consolidada: /processed/{nome_saida}")
+        wb.save(str(caminho_final))
+        wb.close()
+        print("✅ [Injector] Injeção e formatação de máscaras concluídas com sucesso!")
+
+# main.py
+import sys
+import os
+from config import (
+    PASTA_SISTEMA_BRUTO, PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL,
+    ARQUIVO_EXTRAIDO_SISTEMA, ARQUIVO_TEMPLATE_GABARITO, ARQUIVO_FINAL_ENVIO,
+    NOME_GUIA_TEMPLATE, SEPARADOR_DO_ARQUIVO, PULAR_LINHAS_BRUTAS, 
+    COLUNA_STATUS_FILTRO, VALOR_STATUS_DESEJADO, COLUNAS_DATA_PARA_INGLES, COLUNAS_FORMATO_TEXTO_PURO
+)
+
+from src.transformers.pipeline_transformer import DataCleaner, ExcelInjector
+
+def main():
+    print("==================================================")
+    print("     RPA INDUSTRIAL: CORE PIPELINE DO DESAFIO     ")
+    print("==================================================")
+
+    for pasta in [PASTA_SISTEMA_BRUTO, PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL]:
+        os.makedirs(str(pasta), exist_ok=True)
+
+    if not (PASTA_SISTEMA_BRUTO / ARQUIVO_EXTRAIDO_SISTEMA).exists():
+        print(f"❌ Erro de Entrada: Coloque o arquivo de dados '{ARQUIVO_EXTRAIDO_SISTEMA}' em '/data/raw/'")
+        sys.exit(1)
+        
+    if not (PASTA_TEMPLATE_PADRAO / ARQUIVO_TEMPLATE_GABARITO).exists():
+        print(f"❌ Erro de Template: Coloque a planilha gabarito '{ARQUIVO_TEMPLATE_GABARITO}' em '/data/template/'")
+        sys.exit(1)
+
+    try:
+        # FASE 1: Extração e limpeza em memória
+        limpador = DataCleaner(PASTA_SISTEMA_BRUTO)
+        dados_tratados = limpador.processar_dados_brutos(
+            nome_arquivo=ARQUIVO_EXTRAIDO_SISTEMA,
+            separador=SEPARADOR_DO_ARQUIVO,
+            linhas_para_pular=PULAR_LINHAS_BRUTAS,
+            col_status=COLUNA_STATUS_FILTRO,
+            valor_status=VALOR_STATUS_DESEJADO,
+            colunas_data=COLUNAS_DATA_PARA_INGLES,
+            colunas_texto=COLUNAS_FORMATO_TEXTO_PURO
+        )
+
+        print(f"\n📊 Total de registros localizados pós-filtro: {len(dados_tratados)} linhas.")
+
+        # FASE 2: Injeção por coordenadas travando o estilo yyyy-mm-dd
+        injetor = ExcelInjector(PASTA_TEMPLATE_PADRAO, PASTA_RESULTADO_FINAL)
+        injetor.injetar_no_template_xlsx(
+            nome_template=ARQUIVO_TEMPLATE_GABARITO,
+            nome_saida=ARQUIVO_FINAL_ENVIO,
+            nome_guia=NOME_GUIA_TEMPLATE,
+            colunas_data=COLUNAS_DATA_PARA_INGLES,
+            dataframe_dados=dados_tratados
+        )
+        
+        print("\n🏆 ***** RPA FINALIZADO COM SUCESSO COPIANDO A PARTIR DE A1 *****")
+
+    except Exception as e:
+        print(f"\n💥 Falha Crítica na execução do RPA: {e}")
+
+if __name__ == "__main__":
+    main()
